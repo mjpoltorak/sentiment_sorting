@@ -1,6 +1,7 @@
 import pandas as pd
 from textblob import TextBlob
 from collections import Counter
+import timeit
 
 
 def load_data(csv_lst):
@@ -16,14 +17,12 @@ def load_data(csv_lst):
     sentiment_analysis()
 
 
-def sentiment_analysis():
+def original_code():
     df = pd.read_csv('master_companies.csv')
     high_score = -1000
     best_company = None
     low_score = 1000
     worst_company = None
-    # After reading the newly created csv the for loop below tracks the best and worst company based on sentiment
-    # Sentiment is tracked using textblobs polarity measure
     for company in df.iterrows():
         company = company[1]
         blob = TextBlob(company['Purpose'])
@@ -33,8 +32,28 @@ def sentiment_analysis():
         if blob.sentiment.polarity < low_score:
             low_score = blob.sentiment.polarity
             worst_company = company
-    print("Best Company: " + best_company['Name'] + "\n\tScore: " + str(high_score))
-    print("Worst Company: " + worst_company['Name'] + "\n\tScore: " + str(low_score))
+
+
+def revision_code():
+    df = pd.read_csv('master_companies.csv')
+    df['sentiment'] = df['Purpose'].apply(lambda t: TextBlob(t).sentiment.polarity)
+    df.sort_values('sentiment', inplace=True)
+
+
+def sentiment_analysis():
+    df = pd.read_csv('master_companies.csv')
+    print("Comparison of methods")
+    print("Revision Code: ", timeit.timeit("revision_code()", setup="from __main__ import revision_code",  number=100))
+    print("Original Code: ", timeit.timeit("original_code()", setup="from __main__ import original_code", number=100))
+    # As I have demonstrated the revision code is indeed more efficient. While 1 run of each is both under 1 second
+    # it can be seen that over 100 iterations pandas sorting is faster
+    df['sentiment'] = df['Purpose'].apply(lambda t: TextBlob(t).sentiment.polarity)
+    df.sort_values('sentiment', inplace=True)
+    # After reading the newly created csv the for loop below tracks the best and worst company based on sentiment
+    # Sentiment is tracked using textblobs polarity measure
+    #
+    print("Best Company: " + df.iloc[-1]['Name'] + "\n\tScore: " + str(df.iloc[-1]['sentiment']))
+    print("Worst Company: " + df.iloc[0]['Name'] + "\n\tScore: " + str(df.iloc[0]['sentiment']))
     print()
     most_common()
 
